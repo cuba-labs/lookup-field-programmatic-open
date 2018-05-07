@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<window xmlns="http://schemas.haulmont.com/cuba/window.xsd"
+        caption="msg://caption"
+        class="com.company.demo.web.screens.Screen"
+        messagesPack="com.company.demo.web.screens">
+    <dsContext>
+        <collectionDatasource id="usersDs"
+                              class="com.haulmont.cuba.security.entity.User">
+            <query>
+                <![CDATA[select e from sec$User e]]>
+            </query>
+        </collectionDatasource>
+    </dsContext>
+    <dialogMode height="600"
+                width="800"/>
+    <layout>
+        <hbox spacing="true">
+            <lookupField id="lookupField"
+                         optionsDatasource="usersDs"/>
+            <button caption="Alohomora"
+                    invoke="alohomora"/>
+        </hbox>
+    </layout>
+</window>
