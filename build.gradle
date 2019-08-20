@@ -1,6 +1,6 @@
 
 buildscript {
-    ext.cubaVersion = '6.8.7'
+    ext.cubaVersion = '7.0.10'
     repositories {
         
         maven {
@@ -25,10 +25,9 @@ def guiModule = project(":${modulePrefix}-gui")
 def webModule = project(":${modulePrefix}-web")
 def webToolkitModule = project(":${modulePrefix}-web-toolkit")
 
-def servletApi = 'org.apache.tomcat:tomcat-servlet-api:8.0.26'
+def servletApi = 'javax.servlet:javax.servlet-api:3.1.0'
 
 
-apply(plugin: 'idea')
 apply(plugin: 'cuba')
 
 cuba {
@@ -47,12 +46,11 @@ dependencies {
 
 }
 
-def hsql = 'org.hsqldb:hsqldb:2.2.9'
+def hsql = 'org.hsqldb:hsqldb:2.4.1'
 
 configure([globalModule, coreModule, guiModule, webModule, webToolkitModule]) {
     apply(plugin: 'java')
     apply(plugin: 'maven')
-    apply(plugin: 'idea')
     apply(plugin: 'cuba')
 
     dependencies {
@@ -70,7 +68,15 @@ configure([globalModule, coreModule, guiModule, webModule, webToolkitModule]) {
 }
 
 configure(globalModule) {
-    task enhance(type: CubaEnhancing)
+    dependencies {
+        if (!JavaVersion.current().isJava8()) {
+            runtime('javax.xml.bind:jaxb-api:2.3.1')
+            runtime('org.glassfish.jaxb:jaxb-runtime:2.3.1')
+        }
+    }
+    entitiesEnhancing {
+        main { enabled = true }
+    }
 
     
 }
@@ -84,7 +90,7 @@ configure(coreModule) {
 
     dependencies {
         compile(globalModule)
-        provided(servletApi)
+        compileOnly(servletApi)
         jdbc(hsql)
         testRuntime(hsql)
 
@@ -142,7 +148,7 @@ configure(webModule) {
     }
 
     dependencies {
-        provided(servletApi)
+        compileOnly(servletApi)
         compile(guiModule)
 
     }
@@ -212,25 +218,18 @@ configure(webToolkitModule) {
         widgetSetClass = 'com.company.demo.web.toolkit.ui.AppWidgetSet'
     } 
 
-    task webArchive(dependsOn: buildWidgetSet, type: Zip) {
+    task webArchive(dependsOn: buildWidgetSet, type: Jar) {
         from file("$buildDir/web")
-        classifier = 'web'
+        classifier = 'client'
     }
 
     artifacts {
         archives webArchive
     }
 
-    task deploy(dependsOn: buildWidgetSet) {
-        doLast {
-            delete {
-                "$cuba.tomcat.dir/webapps/${modulePrefix}/VAADIN/widgetsets"
-            }
-            copy {
-                from "$buildDir/web"
-                into "$cuba.tomcat.dir/webapps/${modulePrefix}"
-            }
-        }
+    task deploy(dependsOn: webArchive, type: Copy) {
+        from webArchive
+        into "$cuba.tomcat.dir/webapps/${modulePrefix}/WEB-INF/lib"
     }
 }
 
@@ -255,8 +254,5 @@ task restart(dependsOn: ['stop', ":${modulePrefix}-core:deploy", ":${modulePrefi
     }
 }
 
-task wrapper(type: Wrapper) {
-    gradleVersion = '4.3.1'
-}
 
 apply from: 'extra.gradle'
